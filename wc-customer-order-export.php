@@ -11,19 +11,13 @@
 
 defined( 'ABSPATH' ) or die();
 
-if ( is_plugin_active( 'wc-customer-order-export/wc-customer-order-export.php' ) ) {
-	/*
-	 * Create instance.
-	 */
-	add_action( 'plugins_loaded', array( 'WC_Customer_Order_Export', 'get_instance' ) );
-}
-
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
+add_action( 'plugins_loaded', array( 'WC_Customer_Order_Export', 'get_instance' ) );
 
 class WC_Customer_Order_Export {
 
@@ -107,14 +101,16 @@ class WC_Customer_Order_Export {
 	private function download_order( ) {
 		require_once dirname( __FILE__ ) . '/includes/spreadsheet/vendor/autoload.php';
 
+		$filename = 'order-' . $this->order->get_id() . '.xlsx';
+
 		$spreadsheet = new Spreadsheet();
 		$this->compose_sheet( $spreadsheet );
 
-		$writer = new Xlsx($spreadsheet);
+		$writer = new Xlsx( $spreadsheet );
 
 		// Redirect output to a client’s web browser (Xlsx)
 		header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-		header('Content-Disposition: attachment;filename="01simple.xlsx"');
+		header('Content-Disposition: attachment;filename="' . $filename . '"');
 		header('Cache-Control: max-age=0');
 		// If you're serving to IE 9, then the following may be needed
 		header('Cache-Control: max-age=1');
@@ -125,8 +121,8 @@ class WC_Customer_Order_Export {
 		header('Cache-Control: cache, must-revalidate'); // HTTP/1.1
 		header('Pragma: public'); // HTTP/1.0
 
-		$writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-		$writer->save('php://output');
+		$writer = IOFactory::createWriter( $spreadsheet, 'Xlsx' );
+		$writer->save( 'php://output' );
 		exit;
 	}
 
@@ -296,6 +292,7 @@ class WC_Customer_Order_Export {
 		$offset += 2;
 
 		// Variable products
+		$gift_count = 0;
 		foreach ( $variable_products as $variable_product ) {
 			if ( ! $variable_product['is_gift'] ) {
 				$offset_start = $offset;
@@ -313,31 +310,35 @@ class WC_Customer_Order_Export {
 				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
 
 				$offset++;
+			} else {
+				$gift_count++;
 			}
 		}
 
 		$offset++;
 
 		// Gift
-		$active_sheet->setCellValue( "A{$offset}", '-- 以下為贈品 --' );
-		$offset++;
-		foreach ( $variable_products as $variable_product ) {
-			if ( $variable_product['is_gift'] ) {
-				$offset_start = $offset;
-				$active_sheet->setCellValue( "A{$offset}", $variable_product['name'] );
-				$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
-				$offset++;
-				foreach ( $variable_product['attrs'] as $attr ) {
-					$active_sheet->setCellValue( "A{$offset}", $attr['name'] );
-					$active_sheet->setCellValue( "B{$offset}", $attr['value'] );
+		if ( $gift_count > 0 ) {
+			$active_sheet->setCellValue( "A{$offset}", '-- 以下為贈品 --' );
+			$offset++;
+			foreach ( $variable_products as $variable_product ) {
+				if ( $variable_product['is_gift'] ) {
+					$offset_start = $offset;
+					$active_sheet->setCellValue( "A{$offset}", $variable_product['name'] );
+					$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
+					$offset++;
+					foreach ( $variable_product['attrs'] as $attr ) {
+						$active_sheet->setCellValue( "A{$offset}", $attr['name'] );
+						$active_sheet->setCellValue( "B{$offset}", $attr['value'] );
+						$offset++;
+					}
+
+					// Set border.
+					$offset_end = $offset - 1;
+					$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
+
 					$offset++;
 				}
-
-				// Set border.
-				$offset_end = $offset - 1;
-				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
-
-				$offset++;
 			}
 		}
 	}
