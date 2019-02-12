@@ -127,8 +127,11 @@ class WC_Customer_Order_Export {
 	}
 
 	private function compose_sheet( $spreadsheet ) {
-		$spreadsheet->setActiveSheetIndex(0);
+		$spreadsheet->setActiveSheetIndex( 0 );
 		$active_sheet = $spreadsheet->getActiveSheet();
+
+		// Default setting.
+		$active_sheet->getDefaultColumnDimension()->setWidth( 12 );
 		
 		$order = $this->order;
 
@@ -164,13 +167,13 @@ class WC_Customer_Order_Export {
 
 		$active_sheet->setCellValue( 'A5', '出貨明細表' );
 		$active_sheet->getStyle( 'A5' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+		$active_sheet->getStyle( 'A5' )->getFont()->setSize( 16 );
 		$active_sheet->mergeCells( 'A5:H5' );
 		$active_sheet->getStyle( 'A5:H5' )->applyFromArray( $outline_border );
 		
 		// Get items
 		$active_sheet->setCellValue( 'A7', '品名' );
 		$active_sheet->mergeCells( 'A7:B7' );
-		$active_sheet->getStyle( 'A7' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 		$active_sheet->setCellValue( 'C7', '數量' );
 		$active_sheet->setCellValue( 'D7', '單價' );
 		$active_sheet->setCellValue( 'E7', '金額' );
@@ -237,13 +240,11 @@ class WC_Customer_Order_Export {
 		// Subtotal, shipping method, total
 		$active_sheet->setCellValue( "A{$offset}", '小計' );
 		$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
-		$active_sheet->getStyle( "A{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 		$active_sheet->setCellValue( "E{$offset}", $order->get_subtotal() );
 		$offset++;
 
 		$active_sheet->setCellValue( "A{$offset}", '運送方式' );
 		$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
-		$active_sheet->getStyle( "A{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 		$shipping_methods = $order->get_items( 'shipping' );
 		if ( count( $shipping_methods ) > 0 ) {
 			$active_sheet->setCellValue( 'E' . $offset, reset( $shipping_methods )->get_name() );
@@ -252,24 +253,22 @@ class WC_Customer_Order_Export {
 
 		$active_sheet->setCellValue( "A{$offset}", '總計' );
 		$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
-		$active_sheet->getStyle( "A{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 		$active_sheet->setCellValue( "E{$offset}", $order->get_total() );
+		$active_sheet->getStyle( "E{$offset}" )->getFont()->setSize( 18 );
 
 		// Set border.
+		$active_sheet->getStyle( "A7:E{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 		$active_sheet->getStyle( "A7:E{$offset}" )->applyFromArray( $all_border );
 
 		$offset++;
-
-
 
 		// Order ID
 		$active_sheet->setCellValue( 'G7', '訂單編號' );
 		$active_sheet->setCellValue( 'H7', '官網編號' );
 		$active_sheet->setCellValue( 'G8', $order->get_id() );
 		$active_sheet->mergeCells( 'G8:G9' );
-		$active_sheet->getStyle( 'G8' )->getAlignment()->setVertical( Alignment::VERTICAL_CENTER );
 		$active_sheet->mergeCells( 'H8:H9' );
-		$active_sheet->getStyle( 'H8' )->getAlignment()->setVertical( Alignment::VERTICAL_CENTER );
+		$active_sheet->getStyle( 'G7:H9' )->getAlignment()->setVertical( Alignment::VERTICAL_CENTER );
 		// Set border.
 		$active_sheet->getStyle( "G7:H9" )->applyFromArray( $all_border );
 
@@ -320,7 +319,7 @@ class WC_Customer_Order_Export {
 		// Gift
 		if ( $gift_count > 0 ) {
 			$active_sheet->setCellValue( "A{$offset}", '-- 以下為贈品 --' );
-			$offset++;
+			$offset += 2;
 			foreach ( $variable_products as $variable_product ) {
 				if ( $variable_product['is_gift'] ) {
 					$offset_start = $offset;
