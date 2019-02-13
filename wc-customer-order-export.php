@@ -164,17 +164,18 @@ class WC_Customer_Order_Export {
 
 		// Get billing name, address, phone.
 		$name = $order->get_billing_first_name() . $order->get_billing_last_name();
-		$address = $order->get_billing_address_1() . $order->get_billing_address_2();
+		$address = str_replace( '<br/>', ', ', $order->get_formatted_shipping_address() );
 		$phone = $order->get_billing_phone();
 
 		$active_sheet->setCellValue( 'A1', $name );
-		$active_sheet->mergeCells( 'A1:C1' );
+		$active_sheet->mergeCells( 'A1:D1' );
 		$active_sheet->setCellValue( 'A2', $address );
-		$active_sheet->mergeCells( 'A2:C2' );
+		$active_sheet->mergeCells( 'A2:D2' );
 		$active_sheet->setCellValue( 'A3', $phone );
-		$active_sheet->mergeCells( 'A3:C3' );
+		$active_sheet->mergeCells( 'A3:D3' );
 		$active_sheet->getStyle( 'A1:D3' )->getAlignment()->setVertical( Alignment::HORIZONTAL_LEFT );
 		$active_sheet->getStyle( 'A1:D3' )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
+		$active_sheet->getStyle( 'A1:D3' )->getAlignment()->setWrapText( true );
 
 		$active_sheet->setCellValue( 'A5', '出貨明細表' );
 		$active_sheet->getStyle( 'A5' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
