@@ -40,7 +40,8 @@ class WC_Customer_Order_Export {
 		add_action( 'init', array( $this, 'load_plugin_textdomain' ) );
 
 		// Add order action in order list.
-		add_filter( 'woocommerce_admin_order_actions', array( $this, 'add_order_action' ), 99, 2 );
+		// add_filter( 'woocommerce_admin_order_actions', array( $this, 'add_order_action' ), 99, 2 );
+		add_action( 'woocommerce_admin_order_actions_end', array( $this, 'add_order_action2' ), 99 );
 		add_action( 'admin_head', array( $this, 'add_order_action_button_css' ) );
 		add_action( 'wp_ajax_customer_order_export', array( $this, 'customer_order_export' ) );
 
@@ -57,14 +58,22 @@ class WC_Customer_Order_Export {
 		load_plugin_textdomain( $domain, FALSE, basename( dirname( __FILE__ ) ) . '/languages' );
 	}
 	
-	public function add_order_action( $actions, $order ) {
-		$actions[] = [
-			'action' => 'export_order',
-			'url' => admin_url( 'admin-ajax.php?action=customer_order_export&order_id=' . $order->get_id() ),
-			'name' => __( 'Download to Xlsx', 'wc-customer-order-export' ),
-		];
+	// Not work
+	// public function add_order_action( $actions, $order ) {
+	// 	$actions[] = [
+	// 		'action' => 'export_order',
+	// 		'url' => admin_url( 'admin-ajax.php?action=customer_order_export&order_id=' . $order->get_id() ),
+	// 		'name' => __( 'Download to Xlsx', 'wc-customer-order-export' ),
+	// 	];
 
-		return $actions;
+	// 	return $actions;
+	// }
+
+	public function add_order_action2( $order ) {
+		$action = 'export_order';
+		$name = __( 'Download to Xlsx', 'wc-customer-order-export' );
+		$url = admin_url( 'admin-ajax.php?action=customer_order_export&order_id=' . $order->get_id() );
+		printf( '<a class="button tips view %1$s" href="%2$s" data-tip="%3$s">%4$s</a>', esc_attr( $action ), $url, esc_attr( $name ), esc_html( $name ) );
 	}
 
 	public function add_order_action_button_css() {
