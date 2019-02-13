@@ -16,6 +16,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 add_action( 'plugins_loaded', array( 'WC_Customer_Order_Export', 'get_instance' ) );
 
@@ -67,8 +68,7 @@ class WC_Customer_Order_Export {
 	}
 
 	public function add_order_action_button_css() {
-	    $action_slug = 'export_order';
-	    echo '<style>.wc-action-button-'.$action_slug.'::after { font-family: woocommerce !important; content: "\e02e" !important; }</style>';
+	    echo '<style>.column-wc_actions .export_order::after, .order_actions .export_order::after { font-family: woocommerce !important; content: "\e02e" !important; }</style>';
 	}
 
 	public function customer_order_export() {
@@ -164,6 +164,8 @@ class WC_Customer_Order_Export {
 		$active_sheet->mergeCells( 'A2:C2' );
 		$active_sheet->setCellValue( 'A3', $phone );
 		$active_sheet->mergeCells( 'A3:C3' );
+		$active_sheet->getStyle( 'A1:D3' )->getAlignment()->setVertical( Alignment::HORIZONTAL_LEFT );
+		$active_sheet->getStyle( 'A1:D3' )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 
 		$active_sheet->setCellValue( 'A5', '出貨明細表' );
 		$active_sheet->getStyle( 'A5' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
@@ -189,7 +191,8 @@ class WC_Customer_Order_Export {
 			$is_gift = ( $total == 0 );
 			if ( ! $is_gift ) {
 				$row_num = $offset + $item_num;
-				$active_sheet->setCellValue( "A{$row_num}", $product_name );
+				$active_sheet->setCellValue( "A{$row_num}", str_replace( '<br/>', "\n", $product_name ) );
+				$active_sheet->getStyle( "A{$row_num}" )->getAlignment()->setWrapText( true );
 				$active_sheet->mergeCells( "A{$row_num}:B{$row_num}" );
 				$active_sheet->setCellValue( "C{$row_num}", $quantity );
 				$active_sheet->setCellValue( "D{$row_num}", (int)( $total / $quantity ) );
@@ -223,7 +226,7 @@ class WC_Customer_Order_Export {
 						}
 					} else {
 						$variable_product['attrs'][] = array(
-							'name' => wc_attribute_label( $key ),
+							'name' => urldecode( wc_attribute_label( $key ) ), // do urldecode for some attributes
 							'value' => $wc_meta_data->value,
 						);
 					}
@@ -237,20 +240,26 @@ class WC_Customer_Order_Export {
 		$active_sheet->mergeCells( "A{$offset}:E{$offset}" );
 		$offset++;
 
-		// Subtotal, shipping method, total
+		// Subtotal
 		$active_sheet->setCellValue( "A{$offset}", '小計' );
 		$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
 		$active_sheet->setCellValue( "E{$offset}", $order->get_subtotal() );
 		$offset++;
 
-		$active_sheet->setCellValue( "A{$offset}", '運送方式' );
-		$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
+		// Shipping
 		$shipping_methods = $order->get_items( 'shipping' );
+		$shipping_method = '';
 		if ( count( $shipping_methods ) > 0 ) {
-			$active_sheet->setCellValue( 'E' . $offset, reset( $shipping_methods )->get_name() );
+			$shipping_method = reset( $shipping_methods )->get_name();
 		}
+		$active_sheet->setCellValue( "A{$offset}", "運送方式: {$shipping_method}" );
+		$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
+		$active_sheet->getStyle( "A{$offset}" )->getAlignment()->setWrapText( true );
+		$shipping_fee = $order->get_total_shipping();
+		$active_sheet->setCellValue( "E{$offset}", $shipping_fee );
 		$offset++;
 
+		// Total
 		$active_sheet->setCellValue( "A{$offset}", '總計' );
 		$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
 		$active_sheet->setCellValue( "E{$offset}", $order->get_total() );
@@ -271,6 +280,7 @@ class WC_Customer_Order_Export {
 		$active_sheet->getStyle( 'G7:H9' )->getAlignment()->setVertical( Alignment::VERTICAL_CENTER );
 		// Set border.
 		$active_sheet->getStyle( "G7:H9" )->applyFromArray( $all_border );
+		$active_sheet->getStyle( "G7:H9" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 
 		// Payment
 		$active_sheet->setCellValue( 'G11', $order->get_payment_method_title() );
@@ -300,13 +310,16 @@ class WC_Customer_Order_Export {
 				$offset++;
 				foreach ( $variable_product['attrs'] as $attr ) {
 					$active_sheet->setCellValue( "A{$offset}", $attr['name'] );
-					$active_sheet->setCellValue( "B{$offset}", $attr['value'] );
+					$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
+					$active_sheet->setCellValue( "C{$offset}", $attr['value'] );
+					$active_sheet->mergeCells( "C{$offset}:D{$offset}" );
 					$offset++;
 				}
 
 				// Set border.
 				$offset_end = $offset - 1;
-				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
+				$active_sheet->getStyle( "A{$offset_start}:D{$offset_end}" )->applyFromArray( $all_border );
+				$active_sheet->getStyle( "A{$offset_start}:D{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 
 				$offset++;
 			} else {
@@ -328,13 +341,16 @@ class WC_Customer_Order_Export {
 					$offset++;
 					foreach ( $variable_product['attrs'] as $attr ) {
 						$active_sheet->setCellValue( "A{$offset}", $attr['name'] );
-						$active_sheet->setCellValue( "B{$offset}", $attr['value'] );
+						$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
+						$active_sheet->setCellValue( "C{$offset}", $attr['value'] );
+						$active_sheet->mergeCells( "C{$offset}:D{$offset}" );
 						$offset++;
 					}
 
 					// Set border.
 					$offset_end = $offset - 1;
-					$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
+					$active_sheet->getStyle( "A{$offset_start}:D{$offset_end}" )->applyFromArray( $all_border );
+					$active_sheet->getStyle( "A{$offset_start}:D{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 
 					$offset++;
 				}
