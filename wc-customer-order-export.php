@@ -141,6 +141,7 @@ class WC_Customer_Order_Export {
 
 		// Default setting.
 		$active_sheet->getDefaultColumnDimension()->setWidth( 13 );
+		$active_sheet->getColumnDimension('A')->setWidth( 18 );
 		
 		$order = $this->order;
 
@@ -163,34 +164,32 @@ class WC_Customer_Order_Export {
 		];
 
 		// Get billing name, address, phone.
-		$name = $order->get_billing_first_name() . $order->get_billing_last_name();
+		$name = $order->get_billing_first_name();
 		$address = str_replace( '<br/>', ', ', $order->get_formatted_shipping_address() );
 		$phone = $order->get_billing_phone();
+		$email = $order->get_billing_email();
 
 		$active_sheet->setCellValue( 'A1', $name );
-		$active_sheet->mergeCells( 'A1:H1' );
 		$active_sheet->setCellValue( 'A2', $address );
-		$active_sheet->mergeCells( 'A2:H2' );
 		$active_sheet->setCellValue( 'A3', $phone );
-		$active_sheet->mergeCells( 'A3:H3' );
-		$active_sheet->getStyle( 'A1:H3' )->getAlignment()->setVertical( Alignment::HORIZONTAL_LEFT );
-		$active_sheet->getStyle( 'A1:H3' )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
-		$active_sheet->getStyle( 'A1:H3' )->getAlignment()->setWrapText( true );
+		$active_sheet->setCellValue( 'A4', $email );
+		$active_sheet->getStyle( 'A1:A4' )->getAlignment()->setVertical( Alignment::HORIZONTAL_LEFT );
+		$active_sheet->getStyle( 'A1:A4' )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
+		$active_sheet->getStyle( 'A1:A4' )->getAlignment()->setWrapText( false );
 
-		$active_sheet->setCellValue( 'A5', '出貨明細表' );
-		$active_sheet->getStyle( 'A5' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
-		$active_sheet->getStyle( 'A5' )->getFont()->setSize( 16 );
-		$active_sheet->mergeCells( 'A5:H5' );
-		$active_sheet->getStyle( 'A5:H5' )->applyFromArray( $outline_border );
+		$active_sheet->setCellValue( 'A6', '出貨明細表' );
+		$active_sheet->getStyle( 'A6' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+		$active_sheet->getStyle( 'A6' )->getFont()->setSize( 16 );
+		$active_sheet->mergeCells( 'A6:G6' );
+		$active_sheet->getStyle( 'A6:G6' )->applyFromArray( $outline_border );
 		
 		// Get items
-		$active_sheet->setCellValue( 'A7', '品名' );
-		$active_sheet->mergeCells( 'A7:B7' );
-		$active_sheet->setCellValue( 'C7', '數量' );
-		$active_sheet->setCellValue( 'D7', '單價' );
-		$active_sheet->setCellValue( 'E7', '金額' );
+		$active_sheet->setCellValue( 'A8', '品名' );
+		$active_sheet->setCellValue( 'B8', '數量' );
+		$active_sheet->setCellValue( 'C8', '單價' );
+		$active_sheet->setCellValue( 'D8', '金額' );
 
-		$offset = 8;
+		$offset = 9;
 		$variable_products = [];
 		foreach ( $order->get_items() as $item_id => $item_product ) {
 			//
@@ -203,10 +202,9 @@ class WC_Customer_Order_Export {
 				$row_num = $offset + $item_num;
 				$active_sheet->setCellValue( "A{$row_num}", str_replace( '<br/>', "\n", $product_name ) );
 				$active_sheet->getStyle( "A{$row_num}" )->getAlignment()->setWrapText( true );
-				$active_sheet->mergeCells( "A{$row_num}:B{$row_num}" );
-				$active_sheet->setCellValue( "C{$row_num}", $quantity );
-				$active_sheet->setCellValue( "D{$row_num}", (int)( $total / $quantity ) );
-				$active_sheet->setCellValue( "E{$row_num}", $total );
+				$active_sheet->setCellValue( "B{$row_num}", $quantity );
+				$active_sheet->setCellValue( "C{$row_num}", (int)( $total / $quantity ) );
+				$active_sheet->setCellValue( "D{$row_num}", $total );
 
 				$offset++;
 			}
@@ -252,8 +250,7 @@ class WC_Customer_Order_Export {
 
 		// Subtotal
 		$active_sheet->setCellValue( "A{$offset}", '小計' );
-		$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
-		$active_sheet->setCellValue( "E{$offset}", $order->get_subtotal() );
+		$active_sheet->setCellValue( "D{$offset}", $order->get_subtotal() );
 		$offset++;
 
 		// Shipping
@@ -263,52 +260,51 @@ class WC_Customer_Order_Export {
 			$shipping_method = reset( $shipping_methods )->get_name();
 		}
 		$active_sheet->setCellValue( "A{$offset}", "運送方式: {$shipping_method}" );
-		$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
 		$active_sheet->getStyle( "A{$offset}" )->getAlignment()->setWrapText( true );
 		$shipping_fee = $order->get_total_shipping();
-		$active_sheet->setCellValue( "E{$offset}", $shipping_fee );
+		$active_sheet->setCellValue( "D{$offset}", $shipping_fee );
 		$offset++;
 
 		// Total
 		$active_sheet->setCellValue( "A{$offset}", '總計' );
-		$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
-		$active_sheet->setCellValue( "E{$offset}", $order->get_total() );
-		$active_sheet->getStyle( "E{$offset}" )->getFont()->setSize( 18 );
+		$active_sheet->setCellValue( "D{$offset}", $order->get_total() );
+		$active_sheet->getStyle( "D{$offset}" )->getFont()->setSize( 18 );
 
 		// Set border.
-		$active_sheet->getStyle( "A7:E{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
-		$active_sheet->getStyle( "A7:E{$offset}" )->applyFromArray( $all_border );
+		$active_sheet->getStyle( "A7:D{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+		$active_sheet->getStyle( "A7:D{$offset}" )->applyFromArray( $all_border );
 
 		$offset++;
 
 		// Order ID
-		$active_sheet->setCellValue( 'G7', '訂單編號' );
-		$active_sheet->setCellValue( 'H7', '官網編號' );
-		$active_sheet->setCellValue( 'G8', $order->get_id() );
-		$active_sheet->mergeCells( 'G8:G9' );
-		$active_sheet->mergeCells( 'H8:H9' );
-		$active_sheet->getStyle( 'G7:H9' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
-		$active_sheet->getStyle( 'G7:H9' )->getAlignment()->setVertical( Alignment::VERTICAL_CENTER );
+		$active_sheet->setCellValue( 'F8', '訂單編號' );
+		$active_sheet->setCellValue( 'G8', '官網編號' );
+		$active_sheet->setCellValue( 'G9', $order->get_id() );
+		$active_sheet->mergeCells( 'F9:F10' );
+		$active_sheet->mergeCells( 'G9:G10' );
+		$active_sheet->getStyle( 'F8:G10' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+		$active_sheet->getStyle( 'F8:G10' )->getAlignment()->setVertical( Alignment::VERTICAL_CENTER );
 		// Set border.
-		$active_sheet->getStyle( "G7:H9" )->applyFromArray( $all_border );
-		$active_sheet->getStyle( "G7:H9" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
+		$active_sheet->getStyle( "F8:G10" )->applyFromArray( $all_border );
+		$active_sheet->getStyle( "F8:G10" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 
 		// Payment
-		$active_sheet->setCellValue( 'G11', $order->get_payment_method_title() );
-		$active_sheet->mergeCells( 'G11:H12' );
-		$active_sheet->getStyle( 'G11' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
-		$active_sheet->getStyle( 'G11' )->getAlignment()->setVertical( Alignment::VERTICAL_CENTER );
-		$active_sheet->getStyle( 'G11:H12' )->getAlignment()->setWrapText( true );
+		$active_sheet->setCellValue( 'F12', $order->get_payment_method_title() );
+		$active_sheet->mergeCells( 'F12:G13' );
+		$active_sheet->getStyle( 'F12' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+		$active_sheet->getStyle( 'F12' )->getAlignment()->setVertical( Alignment::VERTICAL_CENTER );
+		$active_sheet->getStyle( 'F12:G13' )->getAlignment()->setWrapText( true );
 		// Set border.
-		$active_sheet->getStyle( "G11:H12" )->applyFromArray( $all_border );
+		$active_sheet->getStyle( "F12:G13" )->applyFromArray( $all_border );
 
 		// Invoice
-		$active_sheet->setCellValue( 'G14', '發票註記' );
-		$active_sheet->mergeCells( 'G14:H14' );
-		$active_sheet->getStyle( 'G14' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
-		$active_sheet->mergeCells( 'G15:H16' );
+		$active_sheet->setCellValue( 'F15', '買方：統一編號' );
+		$active_sheet->mergeCells( 'F15:G15' );
+		$active_sheet->getStyle( 'F15' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+		$active_sheet->mergeCells( 'F16:G17' );
 		// Set border.
-		$active_sheet->getStyle( "G14:H16" )->applyFromArray( $all_border );
+		$active_sheet->getStyle( "F15:G17" )->applyFromArray( $all_border );
+		$active_sheet->setCellValue( 'F16', $order->get_billing_last_name() );  // Put the 統一編號 in last name field.
 
 		$offset += 2;
 
@@ -318,20 +314,18 @@ class WC_Customer_Order_Export {
 			if ( ! $variable_product['is_gift'] ) {
 				$offset_start = $offset;
 				$active_sheet->setCellValue( "A{$offset}", $variable_product['name'] );
-				$active_sheet->mergeCells( "A{$offset}:D{$offset}" );
+				$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
 				$offset++;
 				foreach ( $variable_product['attrs'] as $attr ) {
 					$active_sheet->setCellValue( "A{$offset}", $attr['name'] );
-					$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
-					$active_sheet->setCellValue( "C{$offset}", $attr['value'] );
-					$active_sheet->mergeCells( "C{$offset}:D{$offset}" );
+					$active_sheet->setCellValue( "B{$offset}", $attr['value'] );
 					$offset++;
 				}
 
 				// Set border.
 				$offset_end = $offset - 1;
-				$active_sheet->getStyle( "A{$offset_start}:D{$offset_end}" )->applyFromArray( $all_border );
-				$active_sheet->getStyle( "A{$offset_start}:D{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
+				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
+				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 
 				$offset++;
 			} else {
@@ -349,20 +343,18 @@ class WC_Customer_Order_Export {
 				if ( $variable_product['is_gift'] ) {
 					$offset_start = $offset;
 					$active_sheet->setCellValue( "A{$offset}", $variable_product['name'] );
-					$active_sheet->mergeCells( "A{$offset}:D{$offset}" );
+					$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
 					$offset++;
 					foreach ( $variable_product['attrs'] as $attr ) {
 						$active_sheet->setCellValue( "A{$offset}", $attr['name'] );
-						$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
-						$active_sheet->setCellValue( "C{$offset}", $attr['value'] );
-						$active_sheet->mergeCells( "C{$offset}:D{$offset}" );
+						$active_sheet->setCellValue( "B{$offset}", $attr['value'] );
 						$offset++;
 					}
 
 					// Set border.
 					$offset_end = $offset - 1;
-					$active_sheet->getStyle( "A{$offset_start}:D{$offset_end}" )->applyFromArray( $all_border );
-					$active_sheet->getStyle( "A{$offset_start}:D{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
+					$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
+					$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 
 					$offset++;
 				}
