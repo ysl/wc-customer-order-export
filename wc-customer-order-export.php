@@ -150,8 +150,8 @@ class WC_Customer_Order_Export {
 		$spreadsheet->getActiveSheet()->getPageMargins()->setBottom( 0.38 );
 
 		// Default setting.
-		$active_sheet->getDefaultColumnDimension()->setWidth( 13 );
-		$active_sheet->getColumnDimension('A')->setWidth( 18 );
+		$active_sheet->getDefaultColumnDimension()->setWidth( 15 );
+		$active_sheet->getColumnDimension('A')->setWidth( 20 );
 
 		$order = $this->order;
 
@@ -183,7 +183,7 @@ class WC_Customer_Order_Export {
 		$active_sheet->setCellValue( 'A2', $address );
 		$active_sheet->setCellValue( 'A3', $phone );
 		$active_sheet->setCellValue( 'A4', $email );
-		$active_sheet->getStyle( 'A1:A4' )->getAlignment()->setVertical( Alignment::HORIZONTAL_LEFT );
+		$active_sheet->getStyle( 'A1:A4' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_LEFT );
 		$active_sheet->getStyle( 'A1:A4' )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 		$active_sheet->getStyle( 'A1:A4' )->getAlignment()->setWrapText( false );
 
@@ -349,7 +349,6 @@ class WC_Customer_Order_Export {
 			if ( ! $variable_product['is_gift'] ) {
 				$offset_start = $offset;
 				$active_sheet->setCellValue( "A{$offset}", $variable_product['name'] );
-				$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
 				$offset++;
 				foreach ( $variable_product['attrs'] as $attr ) {
 					$active_sheet->setCellValue( "A{$offset}", $attr['name'] );
@@ -398,11 +397,11 @@ class WC_Customer_Order_Export {
 
 			// Print out
 			foreach ( $gift_groups as $product_name => $gift_group ) {
-				$offset_start = $offset;
 				$active_sheet->setCellValue( "A{$offset}", $product_name );
-				$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
+				$active_sheet->getStyle( "A{$offset}:B{$offset}" )->applyFromArray( $all_border );
 				$offset++;
 
+				$offset_start = $offset;
 				foreach ( $gift_group as $attr_name => $attr_val ) {
 					$active_sheet->setCellValue( "A{$offset}", $attr_name );
 					$active_sheet->setCellValue( "B{$offset}", '數量' );
@@ -416,10 +415,12 @@ class WC_Customer_Order_Export {
 				}
 
 				// Set border.
-				$offset_end = $offset - 1;
-				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
-				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
-				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
+				if ( $offset > $offset_start) {
+					$offset_end = $offset - 1;
+					$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+					$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
+					$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
+				}
 			}
 		}
 
