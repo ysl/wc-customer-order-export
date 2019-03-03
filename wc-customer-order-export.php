@@ -164,8 +164,8 @@ class WC_Customer_Order_Export {
 		];
 
 		// Get billing name, address, phone.
-		$name = $order->get_billing_first_name();
-		$address = str_replace( '<br/>', ', ', $order->get_formatted_shipping_address() );
+		$name = $order->get_billing_first_name() . ' ' . $order->get_billing_company() . ' ' . $order->get_billing_address_1();
+		$address = $order->get_billing_city();
 		$phone = $order->get_billing_phone();
 		$email = $order->get_billing_email();
 
@@ -189,28 +189,22 @@ class WC_Customer_Order_Export {
 		$active_sheet->setCellValue( 'C8', '單價' );
 		$active_sheet->setCellValue( 'D8', '金額' );
 
-		$offset = 9;
+		$shown_products = [];
 		$variable_products = [];
 		foreach ( $order->get_items() as $item_id => $item_product ) {
-			//
 			$product = $item_product->get_product();
-			$product_name = $product->get_name();
-			$quantity = $item_product->get_quantity();
 			$total = $item_product->get_total();
 			$is_gift = ( $total == 0 );
 			if ( ! $is_gift ) {
-				$row_num = $offset + $item_num;
-				$active_sheet->setCellValue( "A{$row_num}", str_replace( '<br/>', "\n", $product_name ) );
-				$active_sheet->getStyle( "A{$row_num}" )->getAlignment()->setWrapText( true );
-				$active_sheet->setCellValue( "B{$row_num}", $quantity );
-				$active_sheet->setCellValue( "C{$row_num}", (int)( $total / $quantity ) );
-				$active_sheet->setCellValue( "D{$row_num}", $total );
-
-				$offset++;
+				$shown_products[] = array(
+					'name' => $item_product->get_data()['name'], //str_replace( '<br/>', "\n", $product->get_name() ),
+					'quantity' => $item_product->get_quantity(),
+					'total' => $total,
+				);
 			}
 
 			// Check if variation product.
-			if ( $product->is_type( 'variation' ) ) {
+			if ( $product->is_type( 'variation' ) ) {  // Should we need original product?
 				// Get the common data in an array:
 				$item_product_data = $item_product->get_data();
 
@@ -245,13 +239,27 @@ class WC_Customer_Order_Export {
 			}
 		}
 
-		$active_sheet->mergeCells( "A{$offset}:E{$offset}" );
-		$offset++;
+		// Sort by name.
+		usort( $shown_products, function( $a, $b ) {
+			return strcmp( $a['name'], $b['name'] );
+		} );
+
+		// Print out.
+		$offset = 9;
+		foreach ( $shown_products as $product ) {
+			$active_sheet->setCellValue( "A{$offset}", str_replace( '<br/>', "\n", $product['name'] ) );
+			$active_sheet->getStyle( "A{$offset}" )->getAlignment()->setWrapText( true );
+			$active_sheet->setCellValue( "B{$offset}", $product['quantity'] );
+			$active_sheet->setCellValue( "C{$offset}", (int)( $product['total'] / $product['quantity'] ) );
+			$active_sheet->setCellValue( "D{$offset}", $product['total'] );
+
+			$offset++;
+		}
 
 		// Subtotal
-		$active_sheet->setCellValue( "A{$offset}", '小計' );
-		$active_sheet->setCellValue( "D{$offset}", $order->get_subtotal() );
-		$offset++;
+		// $active_sheet->setCellValue( "A{$offset}", '小計' );
+		// $active_sheet->setCellValue( "D{$offset}", $order->get_subtotal() );
+		// $offset++;
 
 		// Shipping
 		$shipping_methods = $order->get_items( 'shipping' );
@@ -259,9 +267,15 @@ class WC_Customer_Order_Export {
 		if ( count( $shipping_methods ) > 0 ) {
 			$shipping_method = reset( $shipping_methods )->get_name();
 		}
-		$active_sheet->setCellValue( "A{$offset}", "運送方式: {$shipping_method}" );
+		$active_sheet->setCellValue( "A{$offset}", "運送方式" );
+		if ( $shipping_method ) {
+			$active_sheet->setCellValue( "B{$offset}", '1' );
+		} else {
+			$active_sheet->setCellValue( "B{$offset}", '0' );
+		}
 		$active_sheet->getStyle( "A{$offset}" )->getAlignment()->setWrapText( true );
 		$shipping_fee = $order->get_total_shipping();
+		$active_sheet->setCellValue( "C{$offset}", $shipping_fee );
 		$active_sheet->setCellValue( "D{$offset}", $shipping_fee );
 		$offset++;
 
@@ -269,12 +283,19 @@ class WC_Customer_Order_Export {
 		$active_sheet->setCellValue( "A{$offset}", '總計' );
 		$active_sheet->setCellValue( "D{$offset}", $order->get_total() );
 		$active_sheet->getStyle( "D{$offset}" )->getFont()->setSize( 18 );
-
 		// Set border.
 		$active_sheet->getStyle( "A7:D{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 		$active_sheet->getStyle( "A7:D{$offset}" )->applyFromArray( $all_border );
-
 		$offset++;
+
+		// Shipping method
+		if ( $shipping_method ) {
+			$active_sheet->setCellValue( "A{$offset}", "運送方式: {$shipping_method}" );
+			$active_sheet->mergeCells( "A{$offset}:D{$offset}" );
+			$active_sheet->getStyle( "A7:D{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+			$active_sheet->getStyle( "A7:D{$offset}" )->applyFromArray( $all_border );
+			$offset++;
+		}
 
 		// Order ID
 		$active_sheet->setCellValue( 'F8', '訂單編號' );
@@ -310,6 +331,10 @@ class WC_Customer_Order_Export {
 
 		// Variable products
 		$gift_count = 0;
+		// Sort by name.
+		usort( $variable_products, function( $a, $b ) {
+			return strcmp( $a['name'], $b['name'] );
+		} );
 		foreach ( $variable_products as $variable_product ) {
 			if ( ! $variable_product['is_gift'] ) {
 				$offset_start = $offset;
@@ -337,28 +362,67 @@ class WC_Customer_Order_Export {
 
 		// Gift
 		if ( $gift_count > 0 ) {
+			$gift_groups = array();
 			$active_sheet->setCellValue( "A{$offset}", '-- 以下為贈品 --' );
 			$offset += 2;
+			// Evaluate the count.
 			foreach ( $variable_products as $variable_product ) {
 				if ( $variable_product['is_gift'] ) {
-					$offset_start = $offset;
-					$active_sheet->setCellValue( "A{$offset}", $variable_product['name'] );
-					$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
-					$offset++;
-					foreach ( $variable_product['attrs'] as $attr ) {
-						$active_sheet->setCellValue( "A{$offset}", $attr['name'] );
-						$active_sheet->setCellValue( "B{$offset}", $attr['value'] );
-						$offset++;
+					if ( ! isset( $gift_groups[$variable_product['name']] ) ) {
+						$gift_groups[$variable_product['name']] = array();
 					}
-
-					// Set border.
-					$offset_end = $offset - 1;
-					$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
-					$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
-
-					$offset++;
+					// Loop for every attribute (should be only 1)
+					foreach ( $variable_product['attrs'] as $attr ) {
+						if ( ! isset( $gift_groups[$variable_product['name']][$attr['name']] ) ) {
+							$gift_groups[$variable_product['name']][$attr['name']] = array();
+						}
+						// Evaluate the value count.
+						if ( ! isset( $gift_groups[$variable_product['name']][$attr['name']][$attr['value']] ) ) {
+							$gift_groups[$variable_product['name']][$attr['name']][$attr['value']] = 1;
+						} else {
+							$gift_groups[$variable_product['name']][$attr['name']][$attr['value']]++;
+						}
+					}
 				}
 			}
+
+			// Print out
+			foreach ( $gift_groups as $product_name => $gift_group ) {
+				$offset_start = $offset;
+				$active_sheet->setCellValue( "A{$offset}", $product_name );
+				$active_sheet->mergeCells( "A{$offset}:B{$offset}" );
+				$offset++;
+
+				foreach ( $gift_group as $attr_name => $attr_val ) {
+					$active_sheet->setCellValue( "A{$offset}", $attr_name );
+					$active_sheet->setCellValue( "B{$offset}", '數量' );
+					$offset++;
+
+					foreach ( $attr_val as $val => $count ) {
+						$active_sheet->setCellValue( "A{$offset}", $val );
+						$active_sheet->setCellValue( "B{$offset}", $count );
+						$offset++;
+					}
+				}
+
+				// Set border.
+				$offset_end = $offset - 1;
+				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
+				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
+			}
+		}
+
+		// Note
+		$active_sheet->setCellValue( "A{$offset}", '訂單備註' );
+		$active_sheet->getStyle( "A{$offset}:B{$offset}" )->applyFromArray( $all_border );
+		$offset++;
+
+		$company_id = $order->get_billing_last_name();
+		if ( $company_id ) {
+			$active_sheet->setCellValue( "A{$offset}", '發票開統編：' . $company_id );
+			$active_sheet->getStyle( "A{$offset}" )->getAlignment()->setWrapText( false );
+			$active_sheet->getStyle( "A{$offset}:B{$offset}" )->applyFromArray( $all_border );
 		}
 	}
 
