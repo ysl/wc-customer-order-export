@@ -17,6 +17,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 
 add_action( 'plugins_loaded', array( 'WC_Customer_Order_Export', 'get_instance' ) );
 
@@ -139,10 +140,19 @@ class WC_Customer_Order_Export {
 		$spreadsheet->setActiveSheetIndex( 0 );
 		$active_sheet = $spreadsheet->getActiveSheet();
 
+		// Page Setting
+		$spreadsheet->getActiveSheet()->getPageSetup()->setOrientation( PageSetup::ORIENTATION_PORTRAIT );
+		$spreadsheet->getActiveSheet()->getPageSetup()->setFitToWidth( 1 );
+		$spreadsheet->getActiveSheet()->getPageSetup()->setFitToHeight( 1 );
+		$spreadsheet->getActiveSheet()->getPageMargins()->setTop( 0.38 );
+		$spreadsheet->getActiveSheet()->getPageMargins()->setRight( 0.38 );
+		$spreadsheet->getActiveSheet()->getPageMargins()->setLeft( 0.38 );
+		$spreadsheet->getActiveSheet()->getPageMargins()->setBottom( 0.38 );
+
 		// Default setting.
 		$active_sheet->getDefaultColumnDimension()->setWidth( 13 );
 		$active_sheet->getColumnDimension('A')->setWidth( 18 );
-		
+
 		$order = $this->order;
 
 		// Border.
@@ -164,7 +174,7 @@ class WC_Customer_Order_Export {
 		];
 
 		// Get billing name, address, phone.
-		$name = $order->get_billing_first_name() . ' ' . $order->get_billing_company() . ' ' . $order->get_billing_address_1();
+		$name = $order->get_billing_first_name() . ' ' . $order->get_billing_company() . ' ' . $order->get_billing_address_1() . ' 老師收';
 		$address = $order->get_billing_city();
 		$phone = $order->get_billing_phone();
 		$email = $order->get_billing_email();
@@ -267,14 +277,14 @@ class WC_Customer_Order_Export {
 		if ( count( $shipping_methods ) > 0 ) {
 			$shipping_method = reset( $shipping_methods )->get_name();
 		}
-		$active_sheet->setCellValue( "A{$offset}", "運送方式" );
-		if ( $shipping_method ) {
+		$shipping_fee = $order->get_total_shipping();
+		$active_sheet->setCellValue( "A{$offset}", "運費" );
+		if ( $shipping_fee > 0 ) {
 			$active_sheet->setCellValue( "B{$offset}", '1' );
 		} else {
 			$active_sheet->setCellValue( "B{$offset}", '0' );
 		}
 		$active_sheet->getStyle( "A{$offset}" )->getAlignment()->setWrapText( true );
-		$shipping_fee = $order->get_total_shipping();
 		$active_sheet->setCellValue( "C{$offset}", $shipping_fee );
 		$active_sheet->setCellValue( "D{$offset}", $shipping_fee );
 		$offset++;
@@ -413,13 +423,15 @@ class WC_Customer_Order_Export {
 			}
 		}
 
-		// Note
-		$active_sheet->setCellValue( "A{$offset}", '訂單備註' );
-		$active_sheet->getStyle( "A{$offset}:B{$offset}" )->applyFromArray( $all_border );
 		$offset++;
 
+		// Note
 		$company_id = $order->get_billing_last_name();
 		if ( $company_id ) {
+			$active_sheet->setCellValue( "A{$offset}", '訂單備註' );
+			$active_sheet->getStyle( "A{$offset}:B{$offset}" )->applyFromArray( $all_border );
+			$offset++;
+
 			$active_sheet->setCellValue( "A{$offset}", '發票開統編：' . $company_id );
 			$active_sheet->getStyle( "A{$offset}" )->getAlignment()->setWrapText( false );
 			$active_sheet->getStyle( "A{$offset}:B{$offset}" )->applyFromArray( $all_border );
