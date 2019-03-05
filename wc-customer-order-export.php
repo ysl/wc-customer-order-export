@@ -397,7 +397,11 @@ class WC_Customer_Order_Export {
 				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 
 				$additional_offset = ($image_count * 5) - $attr_count;
-				$offset += 1 + $additional_offset;
+				if ( $additional_offset > 0 ) {
+					$offset += $additional_offset;
+				}
+				$offset++;
+
 			} else {
 				$gift_count++;
 			}
