@@ -231,10 +231,19 @@ class WC_Customer_Order_Export {
 					// Integrate with product-input-fields-for-woocommerce plugin.
 					if ( defined( 'ALG_WC_PIF_ID' ) && in_array( $key, ['_alg_wc_pif_global', '_alg_wc_pif_local'] ) ) {
 						foreach ( $wc_meta_data->value as $field ) {
-							$variable_product['attrs'][] = array(
-								'name' => $field['title'],
-								'value' => $field['_value'],
-							);
+							// Check the type.
+							if ( strpos( $field['_value']['type'], 'image/' ) == 0 ) {
+								$variable_product['attrs'][] = array(
+									'name' => $field['title'],
+									'type' => 'image',
+									'value' => $field['_value']['_tmp_name']
+								);
+							} else {
+								$variable_product['attrs'][] = array(
+									'name' => $field['title'],
+									'value' => $field['_value'],
+								);
+							}
 						}
 					} else {
 						$variable_product['attrs'][] = array(
@@ -350,9 +359,34 @@ class WC_Customer_Order_Export {
 				$offset_start = $offset;
 				$active_sheet->setCellValue( "A{$offset}", $variable_product['name'] );
 				$offset++;
+
+				$image_count = 0;
 				foreach ( $variable_product['attrs'] as $attr ) {
 					$active_sheet->setCellValue( "A{$offset}", $attr['name'] );
-					$active_sheet->setCellValue( "B{$offset}", $attr['value'] );
+					if ( isset( $attr['type'] ) && $attr['type'] == 'image' ) {
+						// Get size
+						$path = $attr['value'];
+						if ( file_exists( $path ) ) {
+							$size = getimagesize ( $path );
+							$w = $size[0];
+							$h = $size[1];
+							$drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
+							$drawing->setWorksheet( $active_sheet );
+							$drawing->setPath( $path );
+							$drawing->setCoordinates( 'C' . ($offset - 2) );
+							if ( $w / $h > 2 ) {
+								$drawing->setWidth( 200 );
+							} else {
+								$drawing->setHeight( 100 );
+							}
+							$drawing->setOffsetY( 2 );
+
+							// Increase count.
+							$image_count++;
+						}
+					} else {
+						$active_sheet->setCellValue( "B{$offset}", $attr['value'] );
+					}
 					$offset++;
 				}
 
@@ -361,7 +395,7 @@ class WC_Customer_Order_Export {
 				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
 				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 
-				$offset++;
+				$offset += 1 + ($image_count * 3);
 			} else {
 				$gift_count++;
 			}
