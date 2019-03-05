@@ -361,6 +361,7 @@ class WC_Customer_Order_Export {
 				$offset++;
 
 				$image_count = 0;
+				$attr_count = count( $variable_product['attrs'] );
 				foreach ( $variable_product['attrs'] as $attr ) {
 					$active_sheet->setCellValue( "A{$offset}", $attr['name'] );
 					if ( isset( $attr['type'] ) && $attr['type'] == 'image' ) {
@@ -373,7 +374,7 @@ class WC_Customer_Order_Export {
 							$drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
 							$drawing->setWorksheet( $active_sheet );
 							$drawing->setPath( $path );
-							$drawing->setCoordinates( 'C' . ($offset - 2) );
+							$drawing->setCoordinates( 'C' . $offset_start );
 							if ( $w / $h > 2 ) {
 								$drawing->setWidth( 200 );
 							} else {
@@ -395,7 +396,8 @@ class WC_Customer_Order_Export {
 				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
 				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 
-				$offset += 1 + ($image_count * 3);
+				$additional_offset = ($image_count * 5) - $attr_count;
+				$offset += 1 + $additional_offset;
 			} else {
 				$gift_count++;
 			}
