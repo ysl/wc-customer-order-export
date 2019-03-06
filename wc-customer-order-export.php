@@ -232,12 +232,18 @@ class WC_Customer_Order_Export {
 					if ( defined( 'ALG_WC_PIF_ID' ) && in_array( $key, ['_alg_wc_pif_global', '_alg_wc_pif_local'] ) ) {
 						foreach ( $wc_meta_data->value as $field ) {
 							// Check the type.
-							if ( strpos( $field['_value']['type'], 'image/' ) == 0 ) {
-								$variable_product['attrs'][] = array(
-									'name' => $field['title'],
-									'type' => 'image',
-									'value' => $field['_value']['_tmp_name']
-								);
+							if ( $field['type'] == 'file' ) {
+								// Is image
+								if ( isset( $field['_value']['type'] ) && strpos( $field['_value']['type'], 'image/' ) == 0 ) {
+									$variable_product['attrs'][] = array(
+										'name' => $field['title'],
+										'type' => 'image',
+										'value' => $field['_value']['_tmp_name']
+									);
+								} else {
+									// No file or other type
+									// Don't show.
+								}
 							} else {
 								$variable_product['attrs'][] = array(
 									'name' => $field['title'],
@@ -354,6 +360,7 @@ class WC_Customer_Order_Export {
 		usort( $variable_products, function( $a, $b ) {
 			return strcmp( $a['name'], $b['name'] );
 		} );
+		$image_id = 1;
 		foreach ( $variable_products as $variable_product ) {
 			if ( ! $variable_product['is_gift'] ) {
 				$offset_start = $offset;
@@ -365,24 +372,48 @@ class WC_Customer_Order_Export {
 				foreach ( $variable_product['attrs'] as $attr ) {
 					$active_sheet->setCellValue( "A{$offset}", $attr['name'] );
 					if ( isset( $attr['type'] ) && $attr['type'] == 'image' ) {
-						// Get size
+						$active_sheet->setCellValue( "B{$offset}", '(如圖' . $image_id . ')' );
 						$path = $attr['value'];
 						if ( file_exists( $path ) ) {
+							// Create new image
+							$new_w = 200;
+							$new_h = 100;
+							$text_width = 60;
+							$new_image = @imagecreatetruecolor( $new_w + $text_width, $new_h );
+							$white = imagecolorallocate( $new_image, 255, 255, 255 );
+							imagefill( $new_image, 0, 0, $white );
+
+							// Add image id text.
+							$text_color = imagecolorallocate( $new_image, 0, 0, 0 );
+							$text = 'Image ' . $image_id;
+							imagestring( $new_image, 2, 0, 0, $text, $text_color );
+
+							// Evaluate new size.
 							$size = getimagesize( $path );
-							$w = $size[0];
-							$h = $size[1];
-							$drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
-							$drawing->setWorksheet( $active_sheet );
-							$drawing->setPath( $path );
-							$drawing->setCoordinates( 'C' . $offset_start );
-							if ( $w / $h > 2 ) {
-								$drawing->setWidth( 200 );
+							$src_w = $size[0];
+							$src_h = $size[1];
+							if ( ($src_w / $src_h) > ($new_w / $new_h) ) {
+								$resize_w = $new_w;
+								$resize_h = $src_h * $new_w / $src_w;
 							} else {
-								$drawing->setHeight( 100 );
+								$resize_w = $new_h;
+								$resize_h = $src_w * $new_h / $src_h;
 							}
-							// $drawing->setOffsetY( 2 );
+
+							// Copy image.
+							$src_image = imagecreatefromstring( file_get_contents( $path ) );
+							imagecopyresampled( $new_image, $src_image, $text_width, 0, 0, 0, $resize_w, $resize_h, $src_w, $src_h );
+
+							// Paste to sheet.
+							$drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\MemoryDrawing();
+							$drawing->setImageResource( $new_image );
+							$drawing->setRenderingFunction( \PhpOffice\PhpSpreadsheet\Worksheet\MemoryDrawing::RENDERING_PNG );
+							$drawing->setMimeType( \PhpOffice\PhpSpreadsheet\Worksheet\MemoryDrawing::MIMETYPE_DEFAULT );
+							$drawing->setCoordinates( 'C' . $offset_start );
+							$drawing->setWorksheet( $active_sheet );
 
 							// Increase count.
+							$image_id++;
 							$image_count++;
 						}
 					} else {
