@@ -396,8 +396,8 @@ class WC_Customer_Order_Export {
 								$resize_w = $new_w;
 								$resize_h = $src_h * $new_w / $src_w;
 							} else {
-								$resize_w = $new_h;
-								$resize_h = $src_w * $new_h / $src_h;
+								$resize_h = $new_h;
+								$resize_w = $src_w * $new_h / $src_h;
 							}
 
 							// Copy image.
