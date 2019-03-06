@@ -368,7 +368,7 @@ class WC_Customer_Order_Export {
 						// Get size
 						$path = $attr['value'];
 						if ( file_exists( $path ) ) {
-							$size = getimagesize ( $path );
+							$size = getimagesize( $path );
 							$w = $size[0];
 							$h = $size[1];
 							$drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
@@ -380,7 +380,7 @@ class WC_Customer_Order_Export {
 							} else {
 								$drawing->setHeight( 100 );
 							}
-							$drawing->setOffsetY( 2 );
+							// $drawing->setOffsetY( 2 );
 
 							// Increase count.
 							$image_count++;
