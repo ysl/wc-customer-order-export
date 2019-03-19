@@ -406,29 +406,34 @@ class WC_Customer_Order_Export {
 							$text = 'Image ' . $image_id;
 							imagestring( $new_image, 2, 0, 0, $text, $text_color );
 
-							// Evaluate new size.
-							$size = getimagesize( $path );
-							$src_w = $size[0];
-							$src_h = $size[1];
-							if ( ($src_w / $src_h) > ($new_w / $new_h) ) {
-								$resize_w = $new_w;
-								$resize_h = $src_h * $new_w / $src_w;
-							} else {
-								$resize_h = $new_h;
-								$resize_w = $src_w * $new_h / $src_h;
+							try {
+								// Evaluate new size.
+								$size = getimagesize( $path );
+								$src_w = $size[0];
+								$src_h = $size[1];
+								if ( ($src_w / $src_h) > ($new_w / $new_h) ) {
+									$resize_w = $new_w;
+									$resize_h = $src_h * $new_w / $src_w;
+								} else {
+									$resize_h = $new_h;
+									$resize_w = $src_w * $new_h / $src_h;
+								}
+
+								// Copy image.
+								$src_image = imagecreatefromstring( file_get_contents( $path ) );
+								imagecopyresampled( $new_image, $src_image, $text_width, 0, 0, 0, $resize_w, $resize_h, $src_w, $src_h );
+
+								// Paste to sheet.
+								$drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\MemoryDrawing();
+								$drawing->setImageResource( $new_image );
+								$drawing->setRenderingFunction( \PhpOffice\PhpSpreadsheet\Worksheet\MemoryDrawing::RENDERING_PNG );
+								$drawing->setMimeType( \PhpOffice\PhpSpreadsheet\Worksheet\MemoryDrawing::MIMETYPE_DEFAULT );
+								$drawing->setCoordinates( 'C' . $offset_start );
+								$drawing->setWorksheet( $active_sheet );
+							} catch ( Exception $e ) {
+								// Load image failed.
+								$active_sheet->setCellValue( "C{$offset_start}", '無法載入圖檔:' . $e->getMessage() );
 							}
-
-							// Copy image.
-							$src_image = imagecreatefromstring( file_get_contents( $path ) );
-							imagecopyresampled( $new_image, $src_image, $text_width, 0, 0, 0, $resize_w, $resize_h, $src_w, $src_h );
-
-							// Paste to sheet.
-							$drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\MemoryDrawing();
-							$drawing->setImageResource( $new_image );
-							$drawing->setRenderingFunction( \PhpOffice\PhpSpreadsheet\Worksheet\MemoryDrawing::RENDERING_PNG );
-							$drawing->setMimeType( \PhpOffice\PhpSpreadsheet\Worksheet\MemoryDrawing::MIMETYPE_DEFAULT );
-							$drawing->setCoordinates( 'C' . $offset_start );
-							$drawing->setWorksheet( $active_sheet );
 
 							// Increase count.
 							$image_id++;
