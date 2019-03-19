@@ -229,6 +229,7 @@ class WC_Customer_Order_Export {
 
 				$variable_product = array(
 					'name' => $item_product_data['name'],
+					'quantity' => $item_product->get_quantity(),
 					'attrs' => array(),
 					'is_gift' => $is_gift, // Assume the gift is also a variable product.
 				);
@@ -473,9 +474,9 @@ class WC_Customer_Order_Export {
 						}
 						// Evaluate the value count.
 						if ( ! isset( $gift_groups[$variable_product['name']][$attr['name']][$attr['value']] ) ) {
-							$gift_groups[$variable_product['name']][$attr['name']][$attr['value']] = 1;
+							$gift_groups[$variable_product['name']][$attr['name']][$attr['value']] = $variable_product['quantity'];
 						} else {
-							$gift_groups[$variable_product['name']][$attr['name']][$attr['value']]++;
+							$gift_groups[$variable_product['name']][$attr['name']][$attr['value']] += $variable_product['quantity'];
 						}
 					}
 				}
@@ -492,6 +493,15 @@ class WC_Customer_Order_Export {
 					$active_sheet->setCellValue( "A{$offset}", $attr_name );
 					$active_sheet->setCellValue( "B{$offset}", '數量' );
 					$offset++;
+
+					// Sort by key.
+					uksort( $attr_val, function( $a, $b ) {
+						if ( is_numeric( $a ) && is_numeric( $b ) ) {
+							return (int)$a > (int)$b;
+						} else {
+							return strcmp( $a, $b );
+						}
+					} );
 
 					foreach ( $attr_val as $val => $count ) {
 						$active_sheet->setCellValue( "A{$offset}", $val );
@@ -512,17 +522,17 @@ class WC_Customer_Order_Export {
 
 		$offset++;
 
-		// Note
-		$company_id = $order->get_billing_last_name();
-		if ( $company_id ) {
-			$active_sheet->setCellValue( "A{$offset}", '訂單備註' );
-			$active_sheet->getStyle( "A{$offset}:B{$offset}" )->applyFromArray( $all_border );
-			$offset++;
+		// Order note
+		$active_sheet->setCellValue( "A{$offset}", '備註欄' );
+		$active_sheet->mergeCells( "A{$offset}:G{$offset}" );
+		$active_sheet->getStyle( "A{$offset}:G{$offset}" )->applyFromArray( $all_border );
 
-			$active_sheet->setCellValue( "A{$offset}", '發票開統編：' . $company_id );
-			$active_sheet->getStyle( "A{$offset}" )->getAlignment()->setWrapText( false );
-			$active_sheet->getStyle( "A{$offset}:B{$offset}" )->applyFromArray( $all_border );
-		}
+		$offset++;
+
+		$active_sheet->setCellValue( "A{$offset}", $order->get_customer_note() );
+		$active_sheet->mergeCells( "A{$offset}:G{$offset}" );
+		$active_sheet->getStyle( "A{$offset}:G{$offset}" )->applyFromArray( $all_border );
+		$active_sheet->getStyle( "A{$offset}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 	}
 
 }
