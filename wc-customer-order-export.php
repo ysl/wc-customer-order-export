@@ -151,7 +151,8 @@ class WC_Customer_Order_Export {
 
 		// Default setting.
 		$active_sheet->getDefaultColumnDimension()->setWidth( 15 );
-		$active_sheet->getColumnDimension('A')->setWidth( 20 );
+		$active_sheet->getColumnDimension( 'A' )->setWidth( 20 );
+		$active_sheet->getColumnDimension( 'E' )->setWidth( 7 );
 
 		$order = $this->order;
 
@@ -187,9 +188,16 @@ class WC_Customer_Order_Export {
 		$active_sheet->getStyle( 'A1:A4' )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 		$active_sheet->getStyle( 'A1:A4' )->getAlignment()->setWrapText( false );
 
-		$active_sheet->setCellValue( 'A6', '出貨明細表' );
+		// Date
+		$active_sheet->setCellValue( 'G2', '訂購日期' );
+		$active_sheet->setCellValue( 'G3', $order->order_date );
+		$active_sheet->getStyle( 'G2:G3' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+		$active_sheet->getStyle( 'G2:G3' )->applyFromArray( $all_border );
+
+		$active_sheet->setCellValue( 'A6', '奇米熊-出貨明細表' );
 		$active_sheet->getStyle( 'A6' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
-		$active_sheet->getStyle( 'A6' )->getFont()->setSize( 16 );
+		$active_sheet->getStyle( 'A6' )->getFont()->setSize( 18 );
+		$active_sheet->getStyle( 'A6' )->getFont()->setBold( true );
 		$active_sheet->mergeCells( 'A6:G6' );
 		$active_sheet->getStyle( 'A6:G6' )->applyFromArray( $outline_border );
 		
@@ -198,6 +206,7 @@ class WC_Customer_Order_Export {
 		$active_sheet->setCellValue( 'B8', '數量' );
 		$active_sheet->setCellValue( 'C8', '單價' );
 		$active_sheet->setCellValue( 'D8', '金額' );
+		$active_sheet->getStyle( "A8:D8" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 
 		$shown_products = [];
 		$variable_products = [];
@@ -285,6 +294,7 @@ class WC_Customer_Order_Export {
 		// $active_sheet->setCellValue( "A{$offset}", '小計' );
 		// $active_sheet->setCellValue( "D{$offset}", $order->get_subtotal() );
 		// $offset++;
+		$end_of_items_offset = $offset - 1;
 
 		// Shipping
 		$shipping_methods = $order->get_items( 'shipping' );
@@ -309,16 +319,19 @@ class WC_Customer_Order_Export {
 		$active_sheet->setCellValue( "D{$offset}", $order->get_total() );
 		$active_sheet->getStyle( "D{$offset}" )->getFont()->setSize( 18 );
 		// Set border.
-		$active_sheet->getStyle( "A7:D{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
-		$active_sheet->getStyle( "A7:D{$offset}" )->applyFromArray( $all_border );
+		$active_sheet->getStyle( "A8:D{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+		$active_sheet->getStyle( "A8:D{$offset}" )->applyFromArray( $all_border );
 		$offset++;
+
+		// Set the itmes align to left.
+		$active_sheet->getStyle( "A9:A{$end_of_items_offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_LEFT );
 
 		// Shipping method
 		if ( $shipping_method ) {
 			$active_sheet->setCellValue( "A{$offset}", "運送方式: {$shipping_method}" );
 			$active_sheet->mergeCells( "A{$offset}:D{$offset}" );
-			$active_sheet->getStyle( "A7:D{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
-			$active_sheet->getStyle( "A7:D{$offset}" )->applyFromArray( $all_border );
+			$active_sheet->getStyle( "A{$offset}:D{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+			$active_sheet->getStyle( "A{$offset}:D{$offset}" )->applyFromArray( $all_border );
 			$offset++;
 		}
 
@@ -326,6 +339,7 @@ class WC_Customer_Order_Export {
 		$active_sheet->setCellValue( 'F8', '訂單編號' );
 		$active_sheet->setCellValue( 'G8', '官網編號' );
 		$active_sheet->setCellValue( 'G9', $order->get_id() );
+		$active_sheet->getStyle( 'G9' )->getFont()->setSize( 18 );
 		$active_sheet->mergeCells( 'F9:F10' );
 		$active_sheet->mergeCells( 'G9:G10' );
 		$active_sheet->getStyle( 'F8:G10' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
@@ -346,11 +360,12 @@ class WC_Customer_Order_Export {
 		// Invoice
 		$active_sheet->setCellValue( 'F15', '買方：統一編號' );
 		$active_sheet->mergeCells( 'F15:G15' );
-		$active_sheet->getStyle( 'F15' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+		$active_sheet->setCellValue( 'F16', $order->get_billing_last_name() );  // Put the 統一編號 in last name field.
+		$active_sheet->getStyle( 'F16' )->getFont()->setSize( 18 );
 		$active_sheet->mergeCells( 'F16:G17' );
 		// Set border.
+		$active_sheet->getStyle( 'F15:G17' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 		$active_sheet->getStyle( "F15:G17" )->applyFromArray( $all_border );
-		$active_sheet->setCellValue( 'F16', $order->get_billing_last_name() );  // Put the 統一編號 in last name field.
 
 		$offset += 2;
 
