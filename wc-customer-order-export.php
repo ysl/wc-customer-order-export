@@ -176,7 +176,7 @@ class WC_Customer_Order_Export {
 
 		// Get billing name, address, phone.
 		$name = $order->get_billing_first_name() . ' ' . $order->get_billing_company() . ' ' . $order->get_billing_address_1() . ' 老師收';
-		$address = $order->get_billing_city();
+		$address = $order->get_billing_postcode() . ' ' . $order->get_billing_city();
 		$phone = $order->get_billing_phone();
 		$email = $order->get_billing_email();
 
@@ -190,8 +190,7 @@ class WC_Customer_Order_Export {
 
 		// Date
 		$active_sheet->setCellValue( 'H2', '訂購日期' );
-		$d = strtotime( $order->order_date );
-		$active_sheet->setCellValue( 'H3', date( 'Y-m-d', $d ) );
+		$active_sheet->setCellValue( 'H3', $order->get_date_created()->format( 'Y-m-d') );
 		$active_sheet->getStyle( 'H2:H3' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 		$active_sheet->getStyle( 'H2:H3' )->applyFromArray( $all_border );
 
@@ -386,6 +385,11 @@ class WC_Customer_Order_Export {
 				$active_sheet->setCellValue( "A{$offset}", $variable_product['name'] );
 				$offset++;
 
+				// Quantity
+				$active_sheet->setCellValue( "A{$offset}", '數量' );
+				$active_sheet->setCellValue( "B{$offset}", $variable_product['quantity'] );
+				$offset++;
+
 				$image_count = 0;
 				$attr_count = count( $variable_product['attrs'] );
 				foreach ( $variable_product['attrs'] as $attr ) {
@@ -450,6 +454,7 @@ class WC_Customer_Order_Export {
 				$offset_end = $offset - 1;
 				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
 				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
+				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_LEFT );
 
 				$additional_offset = ($image_count * 5) - $attr_count;
 				if ( $additional_offset > 0 ) {
