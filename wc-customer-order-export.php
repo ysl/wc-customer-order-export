@@ -190,7 +190,8 @@ class WC_Customer_Order_Export {
 
 		// Date
 		$active_sheet->setCellValue( 'H2', '訂購日期' );
-		$active_sheet->setCellValue( 'H3', $order->order_date );
+		$d = strtotime( $order->order_date );
+		$active_sheet->setCellValue( 'H3', date( 'Y-m-d', $d ) );
 		$active_sheet->getStyle( 'H2:H3' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 		$active_sheet->getStyle( 'H2:H3' )->applyFromArray( $all_border );
 
