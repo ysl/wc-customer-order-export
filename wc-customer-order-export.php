@@ -282,8 +282,9 @@ class WC_Customer_Order_Export {
 
 		// Print out.
 		$offset = 9;
-		foreach ( $shown_products as $index => $product ) {
-			$active_sheet->setCellValue( "A{$offset}", $index + 1 );
+		$item_index = 1;
+		foreach ( $shown_products as $product ) {
+			$active_sheet->setCellValue( "A{$offset}", $item_index );
 			$active_sheet->setCellValue( "B{$offset}", str_replace( '<br/>', "\n", $product['name'] ) );
 			$active_sheet->getStyle( "B{$offset}" )->getAlignment()->setWrapText( true );
 			$active_sheet->setCellValue( "C{$offset}", $product['quantity'] );
@@ -291,6 +292,7 @@ class WC_Customer_Order_Export {
 			$active_sheet->setCellValue( "E{$offset}", $product['total'] );
 
 			$offset++;
+			$item_index++;
 		}
 
 		// Subtotal
@@ -306,6 +308,7 @@ class WC_Customer_Order_Export {
 			$shipping_method = reset( $shipping_methods )->get_name();
 		}
 		$shipping_fee = $order->get_total_shipping();
+		$active_sheet->setCellValue( "A{$offset}", $item_index );
 		$active_sheet->setCellValue( "B{$offset}", "運費" );
 		if ( $shipping_fee > 0 ) {
 			$active_sheet->setCellValue( "C{$offset}", '1' );
@@ -361,14 +364,18 @@ class WC_Customer_Order_Export {
 		$active_sheet->getStyle( "G12:H13" )->applyFromArray( $all_border );
 
 		// Invoice
-		$active_sheet->setCellValue( 'G15', '買方：統一編號' );
-		$active_sheet->mergeCells( 'G15:H15' );
-		$active_sheet->setCellValue( 'G16', $order->get_billing_last_name() );  // Put the 統一編號 in last name field.
-		$active_sheet->getStyle( 'G16' )->getFont()->setSize( 18 );
-		$active_sheet->mergeCells( 'G16:H17' );
+		$active_sheet->setCellValue( 'H15', '買方：統一編號' );
+		$company_id = $order->get_billing_last_name();
+		if ( $company_id ) {
+			$active_sheet->setCellValue( 'H16', $company_id );  // Put the 統一編號 in last name field.
+			$spreadsheet->getActiveSheet()->getStyle('H16')->getFill()  // Set background color
+				->setFillType( \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID )
+				->getStartColor()->setRGB( 'FFFF00' );
+		}
+		$active_sheet->getStyle( 'H16' )->getFont()->setSize( 18 );
 		// Set border.
-		$active_sheet->getStyle( 'G15:H17' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
-		$active_sheet->getStyle( "G15:H17" )->applyFromArray( $all_border );
+		$active_sheet->getStyle( 'H15:H16' )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+		$active_sheet->getStyle( "H15:H16" )->applyFromArray( $all_border );
 
 		$offset += 2;
 
