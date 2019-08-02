@@ -484,11 +484,15 @@ class WC_Customer_Order_Export {
 
 		$offset++;
 
+		// Show the gift header.
+		if ( $gift_count > 0 || count( $simple_gifts ) > 0 ) {
+			$active_sheet->setCellValue( "A{$offset}", '-- 以下為贈品 --' );
+			$offset += 2;
+		}
+
 		// Variation gifts.
 		if ( $gift_count > 0 ) {
 			$gift_groups = array();
-			$active_sheet->setCellValue( "A{$offset}", '-- 以下為贈品 --' );
-			$offset += 2;
 			// Evaluate the count.
 			foreach ( $variable_products as $variable_product ) {
 				if ( $variable_product['is_gift'] ) {
@@ -550,8 +554,6 @@ class WC_Customer_Order_Export {
 
 		// Simple gifts.
 		if ( count( $simple_gifts ) > 0 ) {
-			$offset++; // Skip 1 row
-
 			$active_sheet->setCellValue( "A{$offset}", '品名' );
 			$active_sheet->setCellValue( "B{$offset}", '數量' );
 			$active_sheet->getStyle( "A{$offset}:B{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
