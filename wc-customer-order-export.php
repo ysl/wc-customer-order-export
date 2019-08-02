@@ -569,13 +569,14 @@ class WC_Customer_Order_Export {
 			foreach ( $simple_gifts as $gift ) {
 				$active_sheet->setCellValue( "A{$offset}", $gift['name'] );
 				$active_sheet->setCellValue( "B{$offset}", $gift['quantity'] );
+				$active_sheet->getStyle( "A{$offset}" )->getAlignment()->setWrapText( true );
+				$active_sheet->getStyle( "B{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 				$offset++;
 			}
 
 			// Set border.
 			if ( $offset > $offset_start ) {
 				$offset_end = $offset - 1;
-				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
 				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 			}
