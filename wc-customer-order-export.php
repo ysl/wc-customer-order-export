@@ -210,6 +210,7 @@ class WC_Customer_Order_Export {
 		$active_sheet->getStyle( "A8:E8" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 
 		$shown_products = [];
+		$simple_gifts = [];
 		$variable_products = [];
 		foreach ( $order->get_items() as $item_id => $item_product ) {
 			$product = $item_product->get_product();
@@ -224,7 +225,14 @@ class WC_Customer_Order_Export {
 			}
 
 			// Check if variation product.
-			if ( $product->is_type( 'variation' ) ) {  // Should we need original product?
+			if ( $product->is_type( 'simple' ) ) {
+				if ( $is_gift ) {
+					$simple_gifts[] = [
+						'name' => $item_product->get_data()['name'],
+						'quantity' => $item_product->get_quantity()
+					];
+				}
+			} else if ( $product->is_type( 'variation' ) ) {  // Should we need original product?
 				// Get the common data in an array:
 				$item_product_data = $item_product->get_data();
 
@@ -476,7 +484,7 @@ class WC_Customer_Order_Export {
 
 		$offset++;
 
-		// Gift
+		// Variation gifts.
 		if ( $gift_count > 0 ) {
 			$gift_groups = array();
 			$active_sheet->setCellValue( "A{$offset}", '-- 以下為贈品 --' );
@@ -531,12 +539,43 @@ class WC_Customer_Order_Export {
 				}
 
 				// Set border.
-				if ( $offset > $offset_start) {
+				if ( $offset > $offset_start ) {
 					$offset_end = $offset - 1;
 					$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
 					$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
 					$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 				}
+			}
+		} // End of variation gifts.
+
+		// Simple gifts.
+		if ( count( $simple_gifts ) > 0 ) {
+			$offset++; // Skip 1 row
+
+			$active_sheet->setCellValue( "A{$offset}", '品名' );
+			$active_sheet->setCellValue( "B{$offset}", '數量' );
+			$active_sheet->getStyle( "A{$offset}:B{$offset}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+			$active_sheet->getStyle( "A{$offset}:B{$offset}" )->applyFromArray( $all_border );
+			$offset++;
+
+			// Sort by name.
+			usort( $simple_gifts, function( $a, $b ) {
+				return strcmp( $a['name'], $b['name'] );
+			} );
+
+			$offset_start = $offset;
+			foreach ( $simple_gifts as $gift ) {
+				$active_sheet->setCellValue( "A{$offset}", $gift['name'] );
+				$active_sheet->setCellValue( "B{$offset}", $gift['quantity'] );
+				$offset++;
+			}
+
+			// Set border.
+			if ( $offset > $offset_start ) {
+				$offset_end = $offset - 1;
+				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getAlignment()->setHorizontal( Alignment::HORIZONTAL_CENTER );
+				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->applyFromArray( $all_border );
+				$active_sheet->getStyle( "A{$offset_start}:B{$offset_end}" )->getNumberFormat()->setFormatCode( NumberFormat::FORMAT_TEXT ); // Force text
 			}
 		}
 
